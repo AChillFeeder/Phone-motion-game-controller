@@ -41,7 +41,7 @@ export default function App() {
       console.log('Gyroscope data:', data);
     });
 
-    Gyroscope.setUpdateInterval(10);  // Update every 100ms
+    Gyroscope.setUpdateInterval(1);  // Update every 1ms
 
     return () => gyroscopeSubscription && gyroscopeSubscription.remove();
   }, []);
@@ -53,7 +53,7 @@ export default function App() {
       console.log('Accelerometer data:', data);
     });
 
-    Accelerometer.setUpdateInterval(10);  // Update every 100ms
+    Accelerometer.setUpdateInterval(1);  // Update every 1ms
 
     return () => accelerometerSubscription && accelerometerSubscription.remove();
   }, []);
@@ -70,7 +70,7 @@ export default function App() {
         console.log('Sending data:', sensorData);
         ws.current.send(JSON.stringify(sensorData));  // Send the sensor data
       }
-    }, 10);  // Send data every second
+    }, 1);  // Send data every second
 
     return () => clearInterval(interval);  // Clear the interval when component unmounts
   }, [isWsOpen]);  // Only re-run the effect if WebSocket connection status changes

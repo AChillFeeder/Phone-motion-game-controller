@@ -2,12 +2,9 @@ import asyncio
 import websockets
 import pyautogui
 from recognize_movement import recognize_movement
-from pynput.mouse import Button, Controller as MouseController
 import json
-from pynput.keyboard import Controller
+import pydirectinput
 
-keyboard = Controller()
-mouse = MouseController()
 
 # WebSocket server handler
 async def handle_sensor_data(websocket, path):
@@ -25,20 +22,19 @@ async def handle_sensor_data(websocket, path):
                 print(f"Recognized movement: {action}")
     
             if action == "Attack":
-                # mouse.click(Button.left, 1)
                 pyautogui.mouseDown(button='left')
                 pyautogui.mouseUp(button='left')
+                # pass
 
             if action == "Parry":
-                # mouse.click(Button.right, 1)
+                # pass
                 pyautogui.mouseDown(button='right')
                 pyautogui.mouseUp(button='right')
 
             if action == "Dash":
-                pass
-                pyautogui.keyDown('shift')
-                pyautogui.press('s')
-                pyautogui.keyUp('shift')
+                # pass
+                pydirectinput.keyDown('shift')
+                pydirectinput.keyUp('shift')
 
     
     except websockets.ConnectionClosed:
