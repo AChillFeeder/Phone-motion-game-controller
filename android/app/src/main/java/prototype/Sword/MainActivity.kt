@@ -1,4 +1,4 @@
-package com.phonegamecontroller
+package prototype.Sword
 
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +9,11 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 import expo.modules.ReactActivityDelegateWrapper
+
+import android.view.KeyEvent
+import com.facebook.react.bridge.ReactContext
+import com.facebook.react.modules.core.DeviceEventManagerModule
+// import com.facebook.react.ReactActivity
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,5 +62,21 @@ class MainActivity : ReactActivity() {
       // Use the default back button implementation on Android S
       // because it's doing more than [Activity.moveTaskToBack] in fact.
       super.invokeDefaultOnBackPressed()
+  }
+
+    // CUSTOM! MY STUFF
+    // onKeyDown function for detecting volume button presses
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+      if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+          val reactContext: ReactContext? = reactInstanceManager.currentReactContext
+          if (reactContext != null) {
+              val volumeKey = if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) "volume-up" else "volume-down"
+              // Send event to JavaScript
+              reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                  .emit("onVolumeKeyPressed", volumeKey)
+          }
+          return true // Consume event and prevent volume change
+      }
+      return super.onKeyDown(keyCode, event)
   }
 }

@@ -2,6 +2,13 @@
   "expo": {
     "name": "PhoneGameController",
     "slug": "PhoneGameController",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "android": {
+      "userInterfaceStyle": "automatic",
+      "developmentClient": {
+        "disableShakeGesture": true
+      },
+      "package": "prototype.Sword"
+    }
   }
 }
