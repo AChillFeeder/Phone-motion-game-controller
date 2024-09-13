@@ -7,7 +7,7 @@ export default function AccelerometerSensor({ onAccelerometerData }) {
       onAccelerometerData(data);  // Send the data to App.js through the callback
     });
 
-    Accelerometer.setUpdateInterval(10); // Set update interval to 1000ms (1 second)
+    Accelerometer.setUpdateInterval(1); // Set update interval to 1000ms (1 second)
 
     return () => subscription.remove();
   }, []);

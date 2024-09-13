@@ -7,7 +7,7 @@ export default function GyroscopeSensor({ onGyroscopeData }) {
       onGyroscopeData(data);  // Send the data to App.js through the callback
     });
 
-    Gyroscope.setUpdateInterval(100); // Set update interval to 1000ms (1 second)
+    Gyroscope.setUpdateInterval(1); // Set update interval to 1000ms (1 second)
 
     return () => subscription.remove();
   }, []);
