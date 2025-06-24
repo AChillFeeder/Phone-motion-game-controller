@@ -11,6 +11,7 @@
   "dependencies": {
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "@mui/material": "^6.1.0",
     "expo": "~51.0.28",
     "expo-dev-client": "~4.0.26",
@@ -18,7 +19,8 @@
     "expo-status-bar": "~1.12.1",
     "react": "18.2.0",
     "react-native": "0.74.5",
-    "react-native-websocket": "^1.0.2"
+    "react-native-websocket": "^1.0.2",
+    "text-encoding-polyfill": "^0.6.7"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

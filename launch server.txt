@@ -1,0 +1,9 @@
+
+python Desktop\PhoneGameController\main.py
+
+
+adb connect 192.168.1.191:34835
+cd Desktop\PhoneGameController
+
+npx react-native run-android
+

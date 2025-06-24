@@ -5,8 +5,7 @@ apply plugin: "com.facebook.react"
 project.ext.react = [
     enableHermes: true  // Enable Hermes
 ]
-// Ensure Hermes is enabled
-def enableHermes = project.ext.react.get("enableHermes", false)
+
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 

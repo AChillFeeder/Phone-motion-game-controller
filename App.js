@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, TouchableOpacity, Button, NativeEventEmitter, NativeModules } from 'react-native';
 import { Gyroscope, Accelerometer } from 'expo-sensors';
 
@@ -8,14 +8,16 @@ export default function App() {
 
   const gyroscopeDataRef = useRef({ x: 0, y: 0, z: 0 });  // Gyroscope data reference
   const accelerometerDataRef = useRef({ x: 0, y: 0, z: 0 });  // Accelerometer data reference
-  
-  const [currentAction, setCurrentAction] = useState("");
 
-  const reactActionRef = useRef(0);
+  const reactActionRef = useRef(0);  // To store the action timestamp
+  const currentActionRef = useRef("");  // Store action in ref to avoid state re-renders
+  const reportedDelay = useRef(0);
+
+  const delay = 16;
 
   // Initialize WebSocket connection
   useEffect(() => {
-    ws.current = new WebSocket('ws://192.168.1.181:6790');  // Replace with your server's IP and port
+    ws.current = new WebSocket('ws://192.168.1.71:6790');  // ! Replace with your server's IP and port
 
     ws.current.onopen = () => {
       setIsWsOpen(true);
@@ -33,7 +35,7 @@ export default function App() {
 
     // Listen for messages from the server
     ws.current.onmessage = (message) => {
-      console.log(`Delay: ${Date.now() - reactActionRef.current} ms`);
+      reportedDelay.current = Date.now() - reactActionRef.current
     };
 
     return () => {
@@ -50,7 +52,7 @@ export default function App() {
       gyroscopeDataRef.current = data;  // Update the reference directly
     });
 
-    Gyroscope.setUpdateInterval(1);  // Update every 16ms for 60 FPS
+    Gyroscope.setUpdateInterval(delay);  // Update every 16ms for 60 FPS
 
     return () => gyroscopeSubscription && gyroscopeSubscription.remove();
   }, []);
@@ -61,24 +63,24 @@ export default function App() {
       accelerometerDataRef.current = data;  // Update the reference directly
     });
 
-    Accelerometer.setUpdateInterval(1);  // Update every 16ms for 60 FPS
+    Accelerometer.setUpdateInterval(delay);  // Update every 16ms for 60 FPS
 
     return () => accelerometerSubscription && accelerometerSubscription.remove();
   }, []);
 
+  // Listen for volume button presses
   useEffect(() => {
     const eventEmitter = new NativeEventEmitter(NativeModules.DeviceEventManagerModule);
     const subscription = eventEmitter.addListener('onVolumeKeyPressed', (key) => {
       if (key === 'volume-up') {
         console.log('Volume Up Pressed');
-        setCurrentAction("Volume up")
+        currentActionRef.current = "Volume up";  // Store action in ref to avoid re-render
       } else if (key === 'volume-down') {
         console.log('Volume Down Pressed');
-        setCurrentAction("Volume down")
+        currentActionRef.current = "Volume down";
       }
     });
 
-    // Clean up the subscription when the component unmounts
     return () => {
       subscription.remove();
     };
@@ -91,31 +93,35 @@ export default function App() {
         const sensorData = {
           gyroscope: gyroscopeDataRef.current,
           accelerometer: accelerometerDataRef.current,
-          special_action: currentAction,
+          special_action: currentActionRef.current,  // Use ref instead of state to avoid re-renders
+          delay: reportedDelay.current
         };
-        setCurrentAction("");  // reset action after sending
+        currentActionRef.current = "";  // Reset action after sending
         ws.current.send(JSON.stringify(sensorData));
       }
-    }, 1);  // Send data every 16ms for 60 FPS
+    }, delay);  // Send data every 16ms (matching 60 FPS)
 
     return () => clearInterval(interval);  // Clear the interval when component unmounts
-  }, [isWsOpen, currentAction]);
+  }, [isWsOpen]);
 
+  // Camera lock action handler
+  const cameraLock = useCallback(() => {
+    currentActionRef.current = "Camera lock";
+  }, []);
 
-  function cameraLock() {
-    setCurrentAction("Camera lock");
-  }
-  function deflect() {
+  // Deflect action handler
+  const deflect = useCallback(() => {
     reactActionRef.current = Date.now();
-    setCurrentAction("Deflect");
-  }
-
+    currentActionRef.current = "Deflect";
+  }, []);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', height: '80%', gap: 5}}>
-      <Button title='Middle button | Camera lock' onPress={cameraLock}/>
-      <TouchableOpacity style={{ flex: 1, backgroundColor: 'blue', height: '80%', width: '100%' }} onPress={deflect}>
-      </TouchableOpacity>
+      <Button title='Middle button | Camera lock' onPress={cameraLock} />
+      <TouchableOpacity
+        style={{ flex: 1, backgroundColor: 'blue', height: '80%', width: '100%' }}
+        onPress={deflect}
+      />
     </View>
   );
 }
