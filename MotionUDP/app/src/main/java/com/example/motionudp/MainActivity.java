@@ -33,7 +33,8 @@ public class MainActivity extends Activity implements SensorEventListener {
         setContentView(R.layout.activity_main);
 
         try {
-            serverAddress = InetAddress.getByName("192.168.1.71"); //! ← your PC IP - Don't forget to change it!!
+            // Default IP, can change from app settings
+            serverAddress = InetAddress.getByName("192.168.1.71"); // your PC IP, no longer needs to be hardcoded
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -46,6 +47,25 @@ public class MainActivity extends Activity implements SensorEventListener {
         sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
 
         Button lagTestButton = findViewById(R.id.lagTestButton);
+
+        // IP Setting UI
+        EditText ipInput = findViewById(R.id.ipLastSegmentInput);
+        Button setIpButton = findViewById(R.id.setIpButton);
+        setIpButton.setOnClickListener(v -> {
+            String lastSegment = ipInput.getText().toString().trim();
+            try {
+                if (!lastSegment.isEmpty()) {
+                    int segment = Integer.parseInt(lastSegment);
+                    if (segment >= 0 && segment <= 255) {
+                        String fullIP = "192.168.1." + segment;
+                        serverAddress = InetAddress.getByName(fullIP);
+                        Log.i("MotionUDP", "IP set to: " + fullIP);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("MotionUDP", "Invalid IP input", e);
+            }
+        });
 
         // * DELAY HANDLING
         lagTestButton.setOnTouchListener((v, event) -> {

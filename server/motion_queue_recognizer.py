@@ -21,7 +21,7 @@ def add_to_queue(sensor_type, x, y, z):
         accel_queue.append(entry)
 
 def detect_attack_ready():
-    if len(accel_queue) < 2:
+    if len(accel_queue) < 4:
         return False
     dx = accel_queue[-1]['x'] - accel_queue[0]['x']
     dy = accel_queue[-1]['y'] - accel_queue[0]['y']
@@ -30,7 +30,7 @@ def detect_attack_ready():
     return delta_mag > ACCEL_ATTACK_THRESHOLD
 
 def detect_attack_done():
-    if len(accel_queue) < 2:
+    if len(accel_queue) < 4:
         return True
     dx = accel_queue[-1]['x'] - accel_queue[0]['x']
     dy = accel_queue[-1]['y'] - accel_queue[0]['y']
