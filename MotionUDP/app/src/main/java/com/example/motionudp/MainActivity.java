@@ -7,50 +7,54 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.widget.Button;
+import android.widget.EditText;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
-import android.view.MotionEvent;
-import android.widget.Button;
-
 public class MainActivity extends Activity implements SensorEventListener {
 
     private SensorManager sensorManager;
-    private Sensor accelerometer, gyroscope;
+    private Sensor rotationVector;
+    private Sensor linearAcceleration;
+    private Sensor gyroscope;  // ← NEW
 
     private InetAddress serverAddress;
-    private int serverPort = 9001;  // Your PC's listening port
+    private int serverPort = 9001;
 
-    private volatile boolean lagTestPressed = false; // ! -- DEBUG: To calculate delay manually
+    private volatile boolean lagTestPressed = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // No UI needed
         setContentView(R.layout.activity_main);
 
         try {
-            // Default IP, can change from app settings
-            serverAddress = InetAddress.getByName("192.168.1.71"); // your PC IP, no longer needs to be hardcoded
+            serverAddress = InetAddress.getByName("192.168.1.71");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        rotationVector = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        linearAcceleration = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
-        sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
+        if (rotationVector != null)
+            sensorManager.registerListener(this, rotationVector, SensorManager.SENSOR_DELAY_GAME);
+        if (linearAcceleration != null)
+            sensorManager.registerListener(this, linearAcceleration, SensorManager.SENSOR_DELAY_GAME);
+        if (gyroscope != null)
+            sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
 
+        // UI
         Button lagTestButton = findViewById(R.id.lagTestButton);
-
-        // IP Setting UI
         EditText ipInput = findViewById(R.id.ipLastSegmentInput);
         Button setIpButton = findViewById(R.id.setIpButton);
+
         setIpButton.setOnClickListener(v -> {
             String lastSegment = ipInput.getText().toString().trim();
             try {
@@ -67,7 +71,6 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
         });
 
-        // * DELAY HANDLING
         lagTestButton.setOnTouchListener((v, event) -> {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
@@ -80,24 +83,33 @@ public class MainActivity extends Activity implements SensorEventListener {
             }
             return true;
         });
-        // * END DELAY HANDLING
-
-
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (serverAddress == null) return;
 
-        String type = event.sensor.getType() == Sensor.TYPE_ACCELEROMETER ? "accel" : "gyro";
-        float x = event.values[0];
-        float y = event.values[1];
-        float z = event.values[2];
         long timestamp = System.currentTimeMillis();
+        boolean lag = lagTestPressed;
 
-        String message = String.format("%s,%.3f,%.3f,%.3f,%d,%b", type, x, y, z, timestamp, lagTestPressed);
+        switch (event.sensor.getType()) {
+            case Sensor.TYPE_ROTATION_VECTOR:
+                float[] quat = new float[4];
+                SensorManager.getQuaternionFromVector(quat, event.values);
+                sendUDP(String.format("rotq,%.5f,%.5f,%.5f,%.5f,%d,%b",
+                        quat[1], quat[2], quat[3], quat[0], timestamp, lag));
+                break;
 
-        sendUDP(message);
+            case Sensor.TYPE_LINEAR_ACCELERATION:
+                sendUDP(String.format("accel,%.5f,%.5f,%.5f,%d,%b",
+                        event.values[0], event.values[1], event.values[2], timestamp, lag));
+                break;
+
+            case Sensor.TYPE_GYROSCOPE:  // ← NEW
+                sendUDP(String.format("gyro,%.5f,%.5f,%.5f,%d,%b",
+                        event.values[0], event.values[1], event.values[2], timestamp, lag));
+                break;
+        }
     }
 
     private void sendUDP(String message) {

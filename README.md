@@ -24,3 +24,10 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 python .\server\java_server.py
 ```
 
+---
+
+Reintroduce direction-based filtering (e.g., upward-only attacks),
+Add rotation-based parries,
+Or support custom patterns (e.g., combos, chaining).
+
+

@@ -723,6 +723,7 @@ id icon_group
 id ifRoom
 id image
 id info
+id ipLastSegmentInput
 id italic
 id lagTestButton
 id line1
@@ -761,6 +762,7 @@ id search_plate
 id search_src_text
 id search_voice_btn
 id select_dialog_listview
+id setIpButton
 id shortcut
 id showCustom
 id showHome

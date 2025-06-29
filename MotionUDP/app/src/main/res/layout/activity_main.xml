@@ -5,6 +5,12 @@
     android:orientation="horizontal"
     android:padding="16dp">
 
+    <Button
+        android:id="@+id/lagTestButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Test delay" />
+
     <EditText
         android:id="@+id/ipLastSegmentInput"
         android:layout_width="0dp"
