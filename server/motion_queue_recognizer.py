@@ -54,6 +54,11 @@ def detect_parry_end():
 def recognize(sensor_type, x, y, z):
     global motion_active, motion_phase
 
+    # Special case: Volume Up (simulate parry)
+    if sensor_type == "key" and x == "volup":
+        print("[PARRY] Volume Up triggered")
+        return "Parry"
+
     add_to_queue(sensor_type, x, y, z)
 
     if not motion_active:
@@ -63,18 +68,10 @@ def recognize(sensor_type, x, y, z):
             speed = recent_speed()
             print(f"[ATTACK START] Speed: {speed:.2f}")
             return "Attack"
-        # Uncomment for parry
-        # elif sensor_type == "gyro" and detect_parry_start():
-        #     motion_active = True
-        #     motion_phase = "parry"
-        #     return "Parry"
 
     elif motion_active:
         if motion_phase == "attack" and sensor_type == "accel" and detect_attack_end():
             motion_active = False
             motion_phase = None
-        # elif motion_phase == "parry" and sensor_type == "gyro" and detect_parry_end():
-        #     motion_active = False
-        #     motion_phase = None
 
     return None

@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,7 +21,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     private SensorManager sensorManager;
     private Sensor rotationVector;
     private Sensor linearAcceleration;
-    private Sensor gyroscope;  // ← NEW
+    private Sensor gyroscope;
 
     private InetAddress serverAddress;
     private int serverPort = 9001;
@@ -33,7 +34,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         setContentView(R.layout.activity_main);
 
         try {
-            serverAddress = InetAddress.getByName("192.168.1.71");
+            serverAddress = InetAddress.getByName("192.168.1.71"); // Change to match your PC IP
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -50,7 +51,7 @@ public class MainActivity extends Activity implements SensorEventListener {
         if (gyroscope != null)
             sensorManager.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME);
 
-        // UI
+        // IP changer and lag test button
         Button lagTestButton = findViewById(R.id.lagTestButton);
         EditText ipInput = findViewById(R.id.ipLastSegmentInput);
         Button setIpButton = findViewById(R.id.setIpButton);
@@ -105,11 +106,21 @@ public class MainActivity extends Activity implements SensorEventListener {
                         event.values[0], event.values[1], event.values[2], timestamp, lag));
                 break;
 
-            case Sensor.TYPE_GYROSCOPE:  // ← NEW
+            case Sensor.TYPE_GYROSCOPE:
                 sendUDP(String.format("gyro,%.5f,%.5f,%.5f,%d,%b",
                         event.values[0], event.values[1], event.values[2], timestamp, lag));
                 break;
         }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            long timestamp = System.currentTimeMillis();
+            sendUDP(String.format("volkey,%d,%d", keyCode, timestamp));
+            return true;  // Consume the key event
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     private void sendUDP(String message) {
@@ -127,5 +138,7 @@ public class MainActivity extends Activity implements SensorEventListener {
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Not used
+    }
 }

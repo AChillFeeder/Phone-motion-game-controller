@@ -26,23 +26,28 @@ while True:
         if sensor_type in ("accel", "gyro") and len(parts) == 6:
             x, y, z = map(float, parts[1:4])
             timestamp = int(parts[4])
-            lag_test_flag = parts[5]
-
-            delay = test_delay(timestamp, lag_test_flag)
-
-            # print(f"[{sensor_type.upper()}]: {x:.3f}, {y:.3f}, {z:.3f}")
 
             action = recognize(sensor_type, x, y, z)
             if action:
                 print(f"[ACTION] {action}")
 
-        elif sensor_type == "rotq" and len(parts) == 7:
-            x, y, z, w = map(float, parts[1:5])
-            timestamp = int(parts[5])
-            lag_test_flag = parts[6]
-
-            delay = test_delay(timestamp, lag_test_flag)
+        # elif sensor_type == "rotq" and len(parts) == 7:
+        #     x, y, z, w = map(float, parts[1:5])
+        #     timestamp = int(parts[5])
             # print(f"[ROTQ] Quaternion received: ({w:.3f}, {x:.3f}, {y:.3f}, {z:.3f})")
+
+        elif sensor_type == "volkey" and len(parts) == 3:
+            # input type, keyCode, timestamp
+            # 25 down, 24 up
+            key_mapping = {
+                "25": "down",
+                "24": "up"
+            }
+            key_type = key_mapping[parts[1]]
+
+            timestamp = int(parts[2])
+
+            print(f"[KEY EVENT] Volume button: {key_type.upper()} at {time.strftime('%H:%M:%S')}")
 
         else:
             print(f"[ERROR] Malformed packet: {decoded}")
