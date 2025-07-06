@@ -1,0 +1,27 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp">
+
+    <Button
+        android:id="@+id/lagTestButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Test delay" />
+
+    <EditText
+        android:id="@+id/ipLastSegmentInput"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:hint="IP Last Segment"
+        android:inputType="number" />
+
+    <Button
+        android:id="@+id/setIpButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Set IP" />
+</LinearLayout>
