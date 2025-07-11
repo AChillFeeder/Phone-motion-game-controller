@@ -1,6 +1,9 @@
 import socket
 import time
 from motion_queue_recognizer import recognize
+from input_handler import InputHandler
+
+input_handler = InputHandler()
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("0.0.0.0", 9001))
@@ -23,6 +26,9 @@ while True:
 
         sensor_type = parts[0].lower()
 
+        if sensor_type == 'rotq':
+            continue
+
         if sensor_type in ("accel", "gyro") and len(parts) == 6:
             x, y, z = map(float, parts[1:4])
             timestamp = int(parts[4])
@@ -30,6 +36,7 @@ while True:
             action = recognize(sensor_type, x, y, z)
             if action:
                 print(f"[ACTION] {action}")
+                input_handler.handle(action)
 
         # elif sensor_type == "rotq" and len(parts) == 7:
         #     x, y, z, w = map(float, parts[1:5])
@@ -48,6 +55,13 @@ while True:
             timestamp = int(parts[2])
 
             print(f"[KEY EVENT] Volume button: {key_type.upper()} at {time.strftime('%H:%M:%S')}")
+            # ! Refactor this shit
+            if key_type == "down":
+                action = "parry"
+                input_handler.handle(action)
+            if key_type == "up":
+                action = "jump"
+                input_handler.handle(action)
 
         else:
             print(f"[ERROR] Malformed packet: {decoded}")
