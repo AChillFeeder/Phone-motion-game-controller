@@ -4,7 +4,7 @@ import math
 
 # === CONFIGURATION ===
 MAX_QUEUE_LENGTH = 30
-ACCEL_ATTACK_THRESHOLD = 35.0      # Trigger motion if recent speed exceeds this
+ACCEL_ATTACK_THRESHOLD = 25.0      # Trigger motion if recent speed exceeds this
 ACCEL_END_SPEED_THRESHOLD = 5.0   # End motion when speed falls below this
 GYRO_PARRY_THRESHOLD = 4.0         # Optional: for rotation-based detection
 
