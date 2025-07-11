@@ -30,4 +30,20 @@ Reintroduce direction-based filtering (e.g., upward-only attacks),
 Add rotation-based parries,
 Or support custom patterns (e.g., combos, chaining).
 
+---
+
+```
+      ↑ accel_y+
+        [ DASH IN ]
+
+← gyro_z-       gyro_z+ →
+[ DASH L ]     [ DASH R ]
+
+        [ ACCEL BURST ]
+          → ATTACK
+
+Volume↓ = PARRY
+Volume↑ = JUMP
+```
+
 
