@@ -28,6 +28,7 @@ class SensorReceiver:
 
                 sensor_type = parts[0].lower()
                 if sensor_type == "volkey" and len(parts) == 3:
+                    print("volkey")
                     ActionBus.post_volume_key(parts[1], int(parts[2]))
                 else:
                     self.dispatcher.dispatch(sensor_type, parts)
