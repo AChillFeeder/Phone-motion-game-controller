@@ -4,17 +4,12 @@ import mediapipe as mp
 import numpy as np
 from collections import deque
 from typing import Callable, Optional
+from config import *
 
 mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
 
-# Configurations
-DASH_THRESHOLD = 0.06           # horizontal hip movement to count as dash
-KNEE_ANGLE_THRESHOLD = 120      # below => crouching
-JUMP_Y_THRESHOLD = -0.08        # relative hip Y vs baseline for jump
-HIP_EMA_ALPHA    = 0.25         # smoothing for hip.y
-JUMP_VEL_THR     = 0.015        # need some upward speed to call it a jump
-REARM_THR        = -0.01        # must return above this to re-arm
+
 
 def get_angle(a, b, c):
     """Calculate the angle at point b between points a and c."""
@@ -28,24 +23,33 @@ def run(on_event: Optional[Callable[[str], None]] = None,
         show_window: bool = True):
     """
     Start webcam-based detection.
-    on_event: callback receiving one of {"dash_left","dash_right","jump","crouch"}.
+    on_event: callback receiving one of {"dash_left","dash_right","dash_forward","jump","crouch"}.
     """
     pose = mp_pose.Pose()
     cap = cv2.VideoCapture(camera_index)
 
     # State
     hip_history = deque(maxlen=5)
-    dash_cooldown = 0
-    jump_cooldown = 0
     jump_detected = False
     standing_hip_y = None
     hip_y_ema = None
     hip_y_hist = deque(maxlen=3)
+    knee_up_active_L = False
+    knee_up_active_R = False
+    head_y_ema = None
+
+    # Cooldowns
+    dash_cooldown = 0
+    jump_cooldown = 0
+    dash_fwd_cooldown = 0
+    walk_cooldown = 0
 
     # Counters (for HUD only)
+    steps_count = 0
     left_dash_count = 0
     right_dash_count = 0
     jump_count = 0
+    dash_fwd_count = 0
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -58,34 +62,41 @@ def run(on_event: Optional[Callable[[str], None]] = None,
 
         label = "Standing"
         if dash_cooldown > 0: dash_cooldown -= 1
+        if dash_fwd_cooldown > 0: dash_fwd_cooldown -= 1
         if jump_cooldown > 0: jump_cooldown -= 1
+        if walk_cooldown > 0: walk_cooldown -= 1
+
 
         # Defaults for HUD when no pose this frame
         dy = 0.0
         vertical_movement = 0.0
 
         if results.pose_landmarks:
-            landmarks = results.pose_landmarks.landmark
+            lm = results.pose_landmarks.landmark
             mp_draw.draw_landmarks(frame, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-            # Coordinates (use left side consistently)
-            hip = landmarks[mp_pose.PoseLandmark.LEFT_HIP]
-            knee = landmarks[mp_pose.PoseLandmark.LEFT_KNEE]
-            ankle = landmarks[mp_pose.PoseLandmark.LEFT_ANKLE]
+            # Landmarks (both sides where needed)
+            LHIP = lm[mp_pose.PoseLandmark.LEFT_HIP]
+            RHIP = lm[mp_pose.PoseLandmark.RIGHT_HIP]
+            LKN  = lm[mp_pose.PoseLandmark.LEFT_KNEE]
+            RKN  = lm[mp_pose.PoseLandmark.RIGHT_KNEE]
+            LAN  = lm[mp_pose.PoseLandmark.LEFT_ANKLE]
+            RAN  = lm[mp_pose.PoseLandmark.RIGHT_ANKLE]
+            LSH  = lm[mp_pose.PoseLandmark.LEFT_SHOULDER]
+            RSH  = lm[mp_pose.PoseLandmark.RIGHT_SHOULDER]
+            LEL  = lm[mp_pose.PoseLandmark.LEFT_ELBOW]
+            REL  = lm[mp_pose.PoseLandmark.RIGHT_ELBOW]
+            LWR  = lm[mp_pose.PoseLandmark.LEFT_WRIST]
+            RWR  = lm[mp_pose.PoseLandmark.RIGHT_WRIST]
 
-            hip_coords = [hip.x, hip.y]
-            knee_coords = [knee.x, knee.y]
-            ankle_coords = [ankle.x, ankle.y]
-
-            # 1) Crouch
-            knee_angle = get_angle(hip_coords, knee_coords, ankle_coords)
-            if knee_angle < KNEE_ANGLE_THRESHOLD:
+            # 1) Crouch (left leg angle as quick proxy)
+            knee_angle_left = get_angle([LHIP.x,LHIP.y],[LKN.x,LKN.y],[LAN.x,LAN.y])
+            if knee_angle_left < KNEE_ANGLE_THRESHOLD:
                 label = "Crouching"
-                if on_event:
-                    on_event("crouch")
+                if on_event: on_event("crouch")
 
-            # 2) Dash (left/right) from hip X history
-            hip_x = hip.x
+            # 2) Dash left/right from hip X history
+            hip_x = LHIP.x  # choose one side consistently
             hip_history.append(hip_x)
             if len(hip_history) == hip_history.maxlen and dash_cooldown == 0:
                 delta = hip_history[-1] - hip_history[0]
@@ -101,28 +112,23 @@ def run(on_event: Optional[Callable[[str], None]] = None,
                     if on_event: on_event("dash_left")
 
             # 3) Jump (EMA of hip Y + velocity gating)
-            hip_y = hip.y
-
-            # Smooth hip Y (EMA) and keep short history for velocity
+            hip_y = LHIP.y
             if hip_y_ema is None:
                 hip_y_ema = hip_y
             hip_y_ema = (1.0 - HIP_EMA_ALPHA) * hip_y_ema + HIP_EMA_ALPHA * hip_y
             hip_y_hist.append(hip_y_ema)
             dy = 0.0 if len(hip_y_hist) < 2 else (hip_y_hist[-1] - hip_y_hist[-2])
 
-            # Initialize baseline once we have an EMA
             if standing_hip_y is None:
                 standing_hip_y = hip_y_ema
 
             vertical_movement = hip_y_ema - standing_hip_y
 
-            # Slowly re-center baseline when stable (not jumping/crouching)
-            # "Stable" = near baseline and small velocity
-            if (not jump_detected) and abs(vertical_movement) < 0.02 and abs(dy) < 0.01 and knee_angle >= KNEE_ANGLE_THRESHOLD:
+            # re-center baseline when stable (not crouching, not jumping)
+            if (not jump_detected) and abs(vertical_movement) < 0.02 and abs(dy) < 0.01 and knee_angle_left >= KNEE_ANGLE_THRESHOLD:
                 standing_hip_y = 0.98 * standing_hip_y + 0.02 * hip_y_ema
-                vertical_movement = hip_y_ema - standing_hip_y  # keep consistent with EMA
+                vertical_movement = hip_y_ema - standing_hip_y
 
-            # Jump trigger: cooldown + edge (not already jumping) + displacement + upward velocity
             if (jump_cooldown == 0
                 and not jump_detected
                 and vertical_movement < JUMP_Y_THRESHOLD
@@ -130,14 +136,60 @@ def run(on_event: Optional[Callable[[str], None]] = None,
                 label = "Jump!"
                 jump_count += 1
                 jump_detected = True
-                jump_cooldown = 15  # ~frame-based
-
-            # Re-arm after returning near baseline and moving downward
+                jump_cooldown = 15
             elif jump_detected and vertical_movement > REARM_THR and dy > 0:
                 jump_detected = False
                 jump_cooldown = max(jump_cooldown, 5)
 
-        # HUD (guard against None on early frames)
+            # 4) Dash Forward (new: head low + both hands above head)
+            # Landmarks we need
+            NOSE = lm[mp_pose.PoseLandmark.NOSE]
+            LWR  = lm[mp_pose.PoseLandmark.LEFT_WRIST]
+            RWR  = lm[mp_pose.PoseLandmark.RIGHT_WRIST]
+
+            # Smooth head Y for robustness
+            if head_y_ema is None:
+                head_y_ema = NOSE.y
+            head_y_ema = (1.0 - HEAD_EMA_ALPHA) * head_y_ema + HEAD_EMA_ALPHA * NOSE.y
+
+            head_low    = head_y_ema > HEAD_LOW_THR
+            hands_above = (LWR.y < head_y_ema - HAND_ABOVE_MARGIN) and (RWR.y < head_y_ema - HAND_ABOVE_MARGIN)
+
+            if dash_fwd_cooldown == 0 and head_low and hands_above:
+                label = "Dash Forward"
+                dash_fwd_count += 1
+                dash_fwd_cooldown = DASH_FWD_COOLDOWN
+                if on_event: on_event("dash_forward")
+
+
+            # 5) Walking / Knee Up (either leg)
+            # y grows downward in MediaPipe, so (hip.y - knee.y) > 0 means knee is above hip.
+            diffL = LHIP.y - LKN.y
+            diffR = RHIP.y - RKN.y
+
+            if walk_cooldown == 0:
+                if not knee_up_active_L and diffL > KNEE_UP_DELTA:
+                    label = "Walk (L)"
+                    steps_count += 1
+                    knee_up_active_L = True
+                    walk_cooldown = WALK_COOLDOWN
+                    if on_event: on_event("walk_step")
+
+                elif not knee_up_active_R and diffR > KNEE_UP_DELTA:
+                    label = "Walk (R)"
+                    steps_count += 1
+                    knee_up_active_R = True
+                    walk_cooldown = WALK_COOLDOWN
+                    if on_event: on_event("walk_step")
+
+            # Re-arm when knee comes back near hip height
+            if knee_up_active_L and diffL < KNEE_REARM_DELTA:
+                knee_up_active_L = False
+            if knee_up_active_R and diffR < KNEE_REARM_DELTA:
+                knee_up_active_R = False
+
+
+        # HUD
         if show_window:
             disp_ema  = hip_y_ema if hip_y_ema is not None else 0.0
             disp_base = standing_hip_y if standing_hip_y is not None else 0.0
@@ -146,11 +198,20 @@ def run(on_event: Optional[Callable[[str], None]] = None,
             cv2.putText(frame, f"Left Dashes: {left_dash_count}", (30, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 100, 100), 2)
             cv2.putText(frame, f"Right Dashes: {right_dash_count}", (30, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (100, 100, 255), 2)
             cv2.putText(frame, f"Jumps: {jump_count}", (30, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+            cv2.putText(frame, f"Dash Fwd: {dash_fwd_count}", (30, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            cv2.putText(frame, f"Steps: {steps_count}", (30, 200),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 255), 2)
 
-            cv2.putText(frame, f"hip_y_ema: {disp_ema:.3f}", (30, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
-            cv2.putText(frame, f"baseline: {disp_base:.3f}", (30, 245), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
-            cv2.putText(frame, f"dy: {dy:.3f}  dY:{vertical_movement:.3f}", (30, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
-            cv2.putText(frame, f"cooldown:{jump_cooldown} armed:{not jump_detected}", (30, 295), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
+            cv2.putText(frame, f"hip_y_ema: {disp_ema:.3f}", (30, 260), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
+            cv2.putText(frame, f"baseline: {disp_base:.3f}", (30, 282), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
+            cv2.putText(frame, f"dy: {dy:.3f}  dY:{vertical_movement:.3f}", (30, 304), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
+            cv2.putText(frame, f"head_y: { (head_y_ema or 0):.3f}  thr:{HEAD_LOW_THR:.2f}",
+                (30, 326), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
+            try:
+                cv2.putText(frame, f"Lw:{LWR.y:.3f} Rw:{RWR.y:.3f} > above:{(head_y_ema - HAND_ABOVE_MARGIN):.3f}",
+                    (30, 348), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200,200,200), 1)
+            except UnboundLocalError:
+                pass
 
             cv2.imshow("Posture Detection", frame)
             if cv2.waitKey(10) & 0xFF == ord('q'):

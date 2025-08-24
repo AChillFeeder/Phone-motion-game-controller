@@ -15,6 +15,11 @@ gyro_queue = deque(maxlen=MAX_QUEUE_LENGTH)
 motion_active = False
 motion_phase = None  # "attack", "parry", or None
 
+walk_cooldown = 0
+knee_up_active_L = False
+knee_up_active_R = False
+steps_count = 0
+
 
 # === HELPERS ===
 def add_to_queue(sensor_type, x, y, z):

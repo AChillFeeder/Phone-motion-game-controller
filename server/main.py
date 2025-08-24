@@ -17,17 +17,7 @@ except Exception:
 # Camera module we just wrapped
 import camera_recognizer.dash_detection as dash_detection
 
-# Optional config mapping (if you have it)
-try:
-    from config import CAMERA_ACTION_MAP  # e.g. {"dash_left":"dash_out", "dash_right":"dash_in", "jump":"jump"}
-except Exception:
-    CAMERA_ACTION_MAP = {
-        # By default only "jump" maps to an action you already have.
-        # Fill these if you want left/right dashes to do something:
-        # "dash_left":  "dash_out",   # example
-        # "dash_right": "dash_in",    # example
-        "jump": "jump",
-    }
+from config import CAMERA_ACTION_MAP  # e.g. {"dash_left":"dash_out", "dash_right":"dash_in", "jump":"jump"}
 
 # ActionBus for volume keys
 try:
