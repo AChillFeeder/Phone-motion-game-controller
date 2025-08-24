@@ -28,10 +28,13 @@ python .\server\java_server.py
 
 # Features to add
 - [ ] Start / Pause program with the phone: walking up to the field of view of the camera triggers motions and inputs, the player isn't ready yet. We should let the player choose when to start / stop.
-- [ ] Waking / Running: lift knee up to hip level
 - [ ] Direction control: 4 buttons on the phone - forwards, backwards, left, right
 
-- [ ] Dash forward motion: 
+- [x] Waking / Running: lift knee up to hip level
+- [x] Dash forward motion: 
 ![dashing motion](image.png)
 
 # Bugs
+- [x] Jumping doesn't work
+- [x] Crouching is inconsistent
+
