@@ -26,8 +26,12 @@ python .\server\java_server.py
 
 ---
 
-Reintroduce direction-based filtering (e.g., upward-only attacks),
-Add rotation-based parries,
-Or support custom patterns (e.g., combos, chaining).
+# Features to add
+- [ ] Start / Pause program with the phone: walking up to the field of view of the camera triggers motions and inputs, the player isn't ready yet. We should let the player choose when to start / stop.
+- [ ] Waking / Running: lift knee up to hip level
+- [ ] Direction control: 4 buttons on the phone - forwards, backwards, left, right
 
+- [ ] Dash forward motion: 
+![dashing motion](image.png)
 
+# Bugs
