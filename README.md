@@ -21,7 +21,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 # Launch the server
 ```bash
-python .\server\java_server.py
+python server/main.py
 ```
 
 ---

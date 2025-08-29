@@ -2,7 +2,7 @@
 
 import socket
 import threading
-from action_bus import ActionBus
+from .action_bus import ActionBus
 
 class SensorReceiver:
     def __init__(self, dispatcher, host="0.0.0.0", port=9001):
