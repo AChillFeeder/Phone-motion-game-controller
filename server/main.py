@@ -5,17 +5,10 @@ import time
 from dispatcher import SensorDispatcher
 from sensor_receiver import SensorReceiver
 from input_handler import InputHandler
-from motion_queue_recognizer import recognize as mqr_recognize
-
-# Optional dict-based recognizer
-try:
-    from recognize_movement import recognize_movement as rm_recognize
-    USE_RM = True
-except Exception:
-    USE_RM = False
+from recognizers.phone_motion_recognizer import recognize as mqr_recognize
 
 # Camera module we just wrapped
-import camera_recognizer.dash_detection as dash_detection
+import recognizers.dash_detection as dash_detection
 
 from config import CAMERA_ACTION_MAP  # e.g. {"dash_left":"dash_out", "dash_right":"dash_in", "jump":"jump"}
 
@@ -29,40 +22,23 @@ except Exception:
 ih = InputHandler()
 disp = SensorDispatcher()
 
-# Keep last known sensor values for rm_recognize(data_dict)
-last_sample = {
-    "accelerometer": {"x": 0.0, "y": 0.0, "z": 0.0},
-    "gyroscope": {"x": 0.0, "y": 0.0, "z": 0.0},
-}
 
 def recognizer_callback(sensor_type: str, parts):
-    """
-    Receives (sensor_type, parts_list) from SensorReceiver.
-    Feeds phone recognizers and triggers InputHandler on first match.
-    """
     try:
         x = y = z = 0.0
-        if len(parts) >= 4:
+        if sensor_type in ("accel", "gyro") and len(parts) >= 4:
             x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
 
-        # Update dict for rm_recognize
-        if sensor_type == "accel":
-            last_sample["accelerometer"] = {"x": x, "y": y, "z": z}
-        elif sensor_type == "gyro":
-            last_sample["gyroscope"] = {"x": x, "y": y, "z": z}
-
-        # (1) queue-based recognizer
-        act1 = mqr_recognize(sensor_type, x, y, z)
-        # (2) dict-based recognizer
-        act2 = rm_recognize(last_sample) if USE_RM else None
-
-        action_raw = act1 or act2
+        action_raw = mqr_recognize(sensor_type, x, y, z)
         if not action_raw:
             return
 
-        # Normalize action names (java_server uses "Attack", "Parry", "Dash in/out", ...)
         normalized = action_raw.lower().replace(" ", "_")
-        # ih.handle(normalized)
+        ih.handle(normalized)  # <-- make sure this is active
+
+    except Exception as e:
+        print(f"[main] recognizer_callback error: {e} | type={sensor_type} parts={parts}")
+
 
     except Exception as e:
         print(f"[main] recognizer_callback error: {e} | parts={parts}")

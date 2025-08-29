@@ -43,6 +43,7 @@ def run(on_event: Optional[Callable[[str], None]] = None,
     jump_cooldown = 0
     dash_fwd_cooldown = 0
     walk_cooldown = 0
+    crouch_cooldown = 0
 
     # Counters (for HUD only)
     steps_count = 0
@@ -65,6 +66,7 @@ def run(on_event: Optional[Callable[[str], None]] = None,
         if dash_fwd_cooldown > 0: dash_fwd_cooldown -= 1
         if jump_cooldown > 0: jump_cooldown -= 1
         if walk_cooldown > 0: walk_cooldown -= 1
+        if crouch_cooldown > 0: crouch_cooldown -= 1
 
 
         # Defaults for HUD when no pose this frame

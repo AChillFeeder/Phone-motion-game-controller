@@ -15,7 +15,7 @@ class Config:
     priority = {
         "dash_left": "camera",   # "camera" | "phone"
         "dash_right": "camera",
-        "jump": "phone",
+        "jump": "camera",
         "crouch": "camera",
         "swing": "phone",
         "parry": "phone",
@@ -33,8 +33,8 @@ class Config:
 CAMERA_ACTION_MAP = {
     # By default only "jump" maps to an action you already have.
     # Fill these if you want left/right dashes to do something:
-    # "dash_left":  "dash_out",   # example
-    # "dash_right": "dash_in",    # example
+    "dash_left":  "dash_out",
+    "dash_right": "dash_in",
     "jump": "jump",
 }
 
